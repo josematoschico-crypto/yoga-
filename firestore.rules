@@ -1,0 +1,84 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    //
+    // Collection: users
+    // Document ID: Firebase Auth UID
+    // Fields:
+    //   - uid: string (required, must match Auth UID)
+    //   - nome: string (required, 1-100 chars)
+    //   - email: string (required, valid email format)
+    //   - idade: number (required, positive)
+    //   - pais: string (required)
+    //   - nivel: string (optional)
+    //   - goals: list (optional)
+    //   - phone: string (optional)
+    //   - bio: string (optional)
+    //   - role: string (required, 'user' or 'admin')
+    //   - isApproved: bool (required)
+    //   - activationCode: string (required)
+    //   - createdAt: timestamp (required)
+    //
+    // ===============================================================
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+    
+    function isAdmin() {
+      return isAuthenticated() && 
+        (request.auth.token.email.lower() == "josematos.chico@gmail.com" || 
+         (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
+          get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin'));
+    }
+
+    function uidUnchanged() {
+      return !('uid' in request.resource.data) || request.resource.data.uid == request.auth.uid;
+    }
+
+    function uidNotModified() {
+      return !('uid' in request.resource.data) || request.resource.data.uid == resource.data.uid;
+    }
+
+    function isValidEmail(email) {
+      return email is string && email.matches("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$");
+    }
+
+    function isValidUser(data) {
+      let requiredFields = ['uid', 'nome', 'email', 'idade', 'pais', 'role', 'isApproved', 'activationCode', 'createdAt'];
+      let optionalFields = ['nivel', 'goals', 'phone', 'bio'];
+      let allFields = requiredFields.concat(optionalFields);
+      
+      return data.keys().hasAll(requiredFields) &&
+             data.keys().hasOnly(allFields) &&
+             data.uid == request.auth.uid &&
+             data.nome is string && data.nome.size() > 0 && data.nome.size() <= 100 &&
+             isValidEmail(data.email) &&
+             data.idade is number && data.idade > 0 &&
+             data.role in ['user', 'admin'] &&
+             data.isApproved is bool &&
+             data.activationCode is string &&
+             data.createdAt is timestamp;
+    }
+
+    // ===============================================================
+    // User Profiles
+    // ===============================================================
+    match /users/{userId} {
+      // PERMISSÃO PÚBLICA: Permitindo leitura e escrita para todos para que o painel admin 
+      // funcione sem necessidade de login, conforme solicitado pelo usuário.
+      // ATENÇÃO: Isso torna os dados dos usuários visíveis publicamente.
+      allow read, write: if true;
+    }
+  }
+}

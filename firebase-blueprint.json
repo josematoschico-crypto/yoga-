@@ -1,0 +1,33 @@
+{
+  "entities": {
+    "User": {
+      "title": "User Profile",
+      "description": "User profile and subscription status",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "email": { "type": "string", "format": "email" },
+        "nome": { "type": "string" },
+        "idade": { "type": "string" },
+        "pais": { "type": "string" },
+        "nivel": { "type": "string" },
+        "goals": { "type": "array", "items": { "type": "string" } },
+        "phone": { "type": "string" },
+        "bio": { "type": "string" },
+        "isApproved": { "type": "boolean" },
+        "activationCode": { "type": "string" },
+        "role": { "type": "string", "enum": ["user", "admin"] },
+        "progress": { "type": "object" },
+        "tasks": { "type": "array" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "email", "nome"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "User profiles"
+    }
+  }
+}
